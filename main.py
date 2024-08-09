@@ -83,6 +83,7 @@ def is_blacklisted(group_id, user_id):
     return user_id in blacklist
 
 
+# 处理黑名单消息事件
 async def handle_blacklist_message_group(websocket, msg):
     try:
         user_id = str(msg.get("user_id"))
@@ -177,6 +178,7 @@ async def handle_blacklist_message_group(websocket, msg):
         return
 
 
+# 处理黑名单请求事件
 async def handle_blacklist_request_event(websocket, msg):
     try:
         group_id = str(msg.get("group_id"))
@@ -199,3 +201,8 @@ async def handle_blacklist_request_event(websocket, msg):
     except Exception as e:
         logging.error(f"处理黑名单请求事件失败: {e}")
         return
+
+
+# 处理黑名单定时任务
+async def handle_blacklist_cron_task(websocket):
+    pass

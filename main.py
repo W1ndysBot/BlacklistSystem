@@ -3,6 +3,7 @@
 
 import logging
 import os
+import re
 import sys
 import json
 import asyncio
@@ -157,19 +158,19 @@ async def handle_blacklist_message_group(websocket, msg):
                                 f"用户 {target_user_id} 不在黑名单中。",
                             )
                         )
-            else:
-                if raw_message == "blacklist":
-                    menu = (
-                        "黑名单菜单:\n"
-                        "1. blacklist add [CQ:at,qq=用户ID] - 添加用户到黑名单\n"
-                        "2. blacklist rm [CQ:at,qq=用户ID] - 从黑名单移除用户\n"
-                        "3. blacklist list - 显示黑名单用户列表\n"
-                        "4. blacklist check 用户ID - 检查用户是否在黑名单中"
-                    )
-                    asyncio.create_task(send_group_msg(websocket, group_id, menu))
                 else:
-                    # 处理正常消息
-                    pass
+                    if raw_message == "blacklist":
+                        menu = (
+                            "黑名单菜单:\n"
+                            "1. blacklist add [CQ:at,qq=用户ID] - 添加用户到黑名单\n"
+                            "2. blacklist rm [CQ:at,qq=用户ID] - 从黑名单移除用户\n"
+                            "3. blacklist list - 显示黑名单用户列表\n"
+                            "4. blacklist check 用户ID - 检查用户是否在黑名单中"
+                        )
+                        asyncio.create_task(send_group_msg(websocket, group_id, menu))
+                    else:
+                        # 处理正常消息
+                        pass
 
     except Exception as e:
         logging.error(f"处理黑名单消息事件失败: {e}")
@@ -197,3 +198,4 @@ async def handle_blacklist_request_event(websocket, msg):
             )
     except Exception as e:
         logging.error(f"处理黑名单请求事件失败: {e}")
+        return

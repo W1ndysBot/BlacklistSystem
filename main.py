@@ -83,9 +83,71 @@ def is_blacklisted(group_id, user_id):
     return user_id in blacklist
 
 
+# 黑名单管理
+async def manage_blacklist(websocket, message_id, group_id, raw_message, is_authorized):
+    if not is_authorized:
+        return
+
+    if raw_message.startswith("bl-add "):
+        target_user_id = raw_message.split()[1]
+        logging.info(f"添加黑名单用户 {target_user_id}")
+        # 修改正则表达式以匹配新的CQ码格式
+        match = re.search(r"\[CQ:at,qq=(\d+),name=.*\]", target_user_id)
+        if match:
+            target_user_id = match.group(1)  # 提取QQ号
+        logging.info(f"添加黑名单用户 {target_user_id} 到黑名单并踢出")
+        add_to_blacklist(group_id, target_user_id)
+        await send_group_msg(
+            websocket,
+            group_id,
+            f"[CQ:reply,id={message_id}] 用户 {target_user_id} 已添加到黑名单，即将踢出群聊。",
+        )
+        await set_group_kick(websocket, group_id, target_user_id)
+    elif raw_message.startswith("bl-rm "):
+        logging.info(f"执行删除黑名单命令")
+        target_user_id = raw_message.split()[1]
+        # 修改正则表达式以匹配新的CQ码格式
+        match = re.search(r"\[CQ:at,qq=(\d+),name=.*\]", target_user_id)
+        if match:
+            target_user_id = match.group(1)  # 提取QQ号
+        logging.info(f"从黑名单删除用户 {target_user_id}")
+        remove_from_blacklist(group_id, target_user_id)
+        await send_group_msg(
+            websocket,
+            group_id,
+            f"[CQ:reply,id={message_id}] 用户 {target_user_id} 已从黑名单中移除。",
+        )
+    elif raw_message.startswith("bl-check "):
+        target_user_id = raw_message.split()[1]
+        # 修改正则表达式以匹配新的CQ码格式
+        match = re.search(r"\[CQ:at,qq=(\d+),name=.*\]", target_user_id)
+        if match:
+            target_user_id = match.group(1)  # 提取QQ号
+        logging.info(f"检查用户 {target_user_id} 是否在黑名单中")
+        if is_blacklisted(group_id, target_user_id):
+            await send_group_msg(
+                websocket,
+                group_id,
+                f"用户 {target_user_id} 在黑名单中。",
+            )
+        else:
+            await send_group_msg(
+                websocket,
+                group_id,
+                f"用户 {target_user_id} 不在黑名单中。",
+            )
+    elif raw_message.startswith("bl-list"):
+        logging.info(f"执行查看黑名单命令")
+        blacklist = read_blacklist(group_id)
+        await send_group_msg(websocket, group_id, f"黑名单用户: {', '.join(blacklist)}")
+
+
 # 处理黑名单消息事件
 async def handle_blacklist_message_group(websocket, msg):
     try:
+        # 确保数据目录存在
+        os.makedirs(DATA_DIR, exist_ok=True)
+
         user_id = str(msg.get("user_id"))
         group_id = str(msg.get("group_id"))
         raw_message = msg.get("raw_message")
@@ -94,84 +156,22 @@ async def handle_blacklist_message_group(websocket, msg):
 
         if is_blacklisted(group_id, user_id):
             logging.info(f"发现黑名单用户 {user_id}，将踢出群聊。")
-            asyncio.create_task(
-                send_group_msg(
-                    websocket, group_id, f"发现黑名单用户 {user_id}，将踢出群聊。"
-                )
+            await send_group_msg(
+                websocket, group_id, f"发现黑名单用户 {user_id}，将踢出群聊。"
             )
-            asyncio.create_task(set_group_kick(websocket, group_id, user_id))
+            await set_group_kick(websocket, group_id, user_id)
 
         else:
             # 处理管理员命令
-            if is_authorized(role, user_id):
-                if raw_message.startswith("blacklist add "):
-                    if "[CQ:at,qq=" in raw_message:
-                        target_user_id = raw_message.split("[CQ:at,qq=")[1].split(",")[
-                            0
-                        ]
-                    else:
-                        target_user_id = raw_message.split(" ")[2]
-                    add_to_blacklist(group_id, target_user_id)
-                    asyncio.create_task(
-                        send_group_msg(
-                            websocket,
-                            group_id,
-                            f"用户 {target_user_id} 已被加入黑名单。",
-                        )
-                    )
-                elif raw_message.startswith("blacklist rm "):
-                    if "[CQ:at,qq=" in raw_message:
-                        target_user_id = raw_message.split("[CQ:at,qq=")[1].split(",")[
-                            0
-                        ]
-                    else:
-                        target_user_id = raw_message.split(" ")[2]
-                    remove_from_blacklist(group_id, target_user_id)
-                    asyncio.create_task(
-                        send_group_msg(
-                            websocket,
-                            group_id,
-                            f"用户 {target_user_id} 已被移出黑名单。",
-                        )
-                    )
-                elif raw_message.startswith("blacklist list"):
-                    blacklist = read_blacklist(group_id)
-                    asyncio.create_task(
-                        send_group_msg(
-                            websocket, group_id, f"黑名单用户: {', '.join(blacklist)}"
-                        )
-                    )
-                elif raw_message.startswith("blacklist check "):
-                    target_user_id = raw_message.split(" ")[2]
-                    if is_blacklisted(group_id, target_user_id):
-                        asyncio.create_task(
-                            send_group_msg(
-                                websocket,
-                                group_id,
-                                f"用户 {target_user_id} 在黑名单中。",
-                            )
-                        )
-                    else:
-                        asyncio.create_task(
-                            send_group_msg(
-                                websocket,
-                                group_id,
-                                f"用户 {target_user_id} 不在黑名单中。",
-                            )
-                        )
-                else:
-                    if raw_message == "blacklist":
-                        menu = (
-                            "黑名单菜单:\n"
-                            "1. blacklist add [CQ:at,qq=用户ID] - 添加用户到黑名单\n"
-                            "2. blacklist rm [CQ:at,qq=用户ID] - 从黑名单移除用户\n"
-                            "3. blacklist list - 显示黑名单用户列表\n"
-                            "4. blacklist check 用户ID - 检查用户是否在黑名单中"
-                        )
-                        asyncio.create_task(send_group_msg(websocket, group_id, menu))
-                    else:
-                        # 处理正常消息
-                        pass
+            is_admin = is_group_admin(role)  # 是否是群管理员
+            is_owner = is_group_owner(role)  # 是否是群主
+            is_authorized = (is_admin or is_owner) or (
+                user_id in owner_id
+            )  # 是否是群主或管理员或root管理员
+
+            await manage_blacklist(
+                websocket, message_id, group_id, raw_message, is_authorized
+            )
 
     except Exception as e:
         logging.error(f"处理黑名单消息事件失败: {e}")
@@ -181,23 +181,24 @@ async def handle_blacklist_message_group(websocket, msg):
 # 处理黑名单请求事件
 async def handle_blacklist_request_event(websocket, msg):
     try:
+        # 确保数据目录存在
+        os.makedirs(DATA_DIR, exist_ok=True)
+
         group_id = str(msg.get("group_id"))
         user_id = str(msg.get("user_id"))
         flag = str(msg.get("flag"))
         if is_blacklisted(group_id, user_id):
             logging.info(f"发现黑名单用户 {user_id}申请入群，将拒绝申请。")
-            asyncio.create_task(
-                set_group_add_request(
-                    websocket, flag, "group", False, "你已被加入黑名单。"
-                )
+            await set_group_add_request(
+                websocket, flag, "group", False, "你已被加入黑名单。"
             )
-            asyncio.create_task(
-                send_group_msg(
-                    websocket,
-                    group_id,
-                    f"发现黑名单用户 {user_id}申请入群，将拒绝申请。",
-                )
+
+            await send_group_msg(
+                websocket,
+                group_id,
+                f"发现黑名单用户 {user_id}申请入群，将拒绝申请。",
             )
+
     except Exception as e:
         logging.error(f"处理黑名单请求事件失败: {e}")
         return

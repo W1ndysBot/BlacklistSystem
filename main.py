@@ -26,6 +26,7 @@ os.makedirs(DATA_DIR, exist_ok=True)
 
 from app.config import owner_id
 from app.api import *
+from app.switch import load_switch, save_switch
 
 
 # 是否是群主

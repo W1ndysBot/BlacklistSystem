@@ -6,7 +6,6 @@ import os
 import re
 import sys
 import json
-import asyncio
 
 # 数据存储路径
 DATA_DIR = os.path.join(

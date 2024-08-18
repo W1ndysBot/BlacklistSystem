@@ -155,9 +155,11 @@ async def handle_blacklist_message_group(websocket, msg):
         message_id = msg.get("message_id")
 
         if is_blacklisted(group_id, user_id):
-            logging.info(f"发现黑名单用户 {user_id}，将踢出群聊。")
+            logging.info(f"发现黑名单用户 {user_id}，将踢出群聊，并不再接受入群。")
             await send_group_msg(
-                websocket, group_id, f"发现黑名单用户 {user_id}，将踢出群聊。"
+                websocket,
+                group_id,
+                f"发现黑名单用户 {user_id}，将踢出群聊，并不再接受入群。",
             )
             await set_group_kick(websocket, group_id, user_id)
 
@@ -202,6 +204,21 @@ async def handle_blacklist_request_event(websocket, msg):
     except Exception as e:
         logging.error(f"处理黑名单请求事件失败: {e}")
         return
+
+
+# 处理进群通知，检测进群用户是否在黑名单
+async def handle_blacklist_group_notice(websocket, msg):
+    user_id = str(msg.get("user_id"))
+    group_id = str(msg.get("group_id"))
+    if is_blacklisted(group_id, user_id):
+        logging.info(f"发现黑名单用户 {user_id}，将踢出群聊，并不再接受入群。")
+        await send_group_msg(
+            websocket,
+            group_id,
+            f"发现黑名单用户 {user_id}，将踢出群聊，并不再接受入群。",
+        )
+        await set_group_kick(websocket, group_id, user_id)
+    pass
 
 
 # 处理黑名单定时任务

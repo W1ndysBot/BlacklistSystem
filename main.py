@@ -100,7 +100,7 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
         await send_group_msg(
             websocket,
             group_id,
-            f"[CQ:reply,id={message_id}]用户 {target_user_id} 已添加到黑名单，即将踢出群聊。",
+            f"[CQ:reply,id={message_id}]用户 {target_user_id} 已添加到黑名单，将踢出并不再接受入群。",
         )
         await set_group_kick(websocket, group_id, target_user_id)
     elif raw_message.startswith("bl-rm "):

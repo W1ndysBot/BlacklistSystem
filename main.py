@@ -88,7 +88,7 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
     if not is_authorized:
         return
 
-    if raw_message.startswith("bl-add "):
+    if raw_message.startswith("bl-add"):
         target_user_id = raw_message.split()[1]
         logging.info(f"添加黑名单用户 {target_user_id}")
         # 修改正则表达式以匹配新的CQ码格式
@@ -103,7 +103,7 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
             f"[CQ:reply,id={message_id}]用户 {target_user_id} 已添加到黑名单，将踢出并不再接受入群。",
         )
         await set_group_kick(websocket, group_id, target_user_id)
-    elif raw_message.startswith("bl-rm "):
+    elif raw_message.startswith("bl-rm"):
         logging.info(f"执行删除黑名单命令")
         target_user_id = raw_message.split()[1]
         # 修改正则表达式以匹配新的CQ码格式
@@ -117,7 +117,7 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
             group_id,
             f"[CQ:reply,id={message_id}]用户 {target_user_id} 已从黑名单中移除。",
         )
-    elif raw_message.startswith("bl-check "):
+    elif raw_message.startswith("bl-check"):
         target_user_id = raw_message.split()[1]
         # 修改正则表达式以匹配新的CQ码格式
         match = re.search(r"\[CQ:at,qq=(\d+),name=.*\]", target_user_id)

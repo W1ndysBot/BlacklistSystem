@@ -153,10 +153,8 @@ async def handle_blacklist_message_group(websocket, msg):
         raw_message = msg.get("raw_message")
         role = msg.get("sender", {}).get("role")
         message_id = msg.get("message_id")
-        notice_type = msg.get("notice_type")
 
-        # 如果用户在黑名单中，并且不是撤回消息，因为测试发现，撤回消息的user_id是被拉黑的用户
-        if is_blacklisted(group_id, user_id) and notice_type != "group_recall":
+        if is_blacklisted(group_id, user_id):
             logging.info(f"发现黑名单用户 {user_id}，将踢出群聊，并不再接受入群。")
             await send_group_msg(
                 websocket,
@@ -212,7 +210,10 @@ async def handle_blacklist_request_event(websocket, msg):
 async def handle_blacklist_group_notice(websocket, msg):
     user_id = str(msg.get("user_id"))
     group_id = str(msg.get("group_id"))
-    if is_blacklisted(group_id, user_id):
+    notice_type = msg.get("notice_type")
+
+    # 如果用户在黑名单中，并且不是撤回消息，因为测试发现，撤回消息的user_id是被拉黑的用户
+    if is_blacklisted(group_id, user_id) and notice_type != "group_recall":
         logging.info(f"发现黑名单用户 {user_id}，将踢出群聊，并不再接受入群。")
         await send_group_msg(
             websocket,

@@ -88,10 +88,10 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
     if not is_authorized:
         return
 
-    if raw_message.startswith("bl-add"):
+    if raw_message.startswith("bladd"):
 
         # 匹配CQ码
-        match = re.search(r"bl-add\[CQ:at,qq=(\d+)\]", raw_message)
+        match = re.search(r"bladd\[CQ:at,qq=(\d+)\]", raw_message)
         if match:
             target_user_id = match.group(1)
             logging.info(f"添加黑名单用户 {target_user_id} 到黑名单并踢出")
@@ -104,7 +104,7 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
             )
 
         # 匹配QQ号
-        match = re.search(r"bl-add([0-9]+)", raw_message)
+        match = re.search(r"bladd([0-9]+)", raw_message)
         if match:
             target_user_id = match.group(1)
             logging.info(f"添加黑名单用户 {target_user_id} 到黑名单并踢出")
@@ -116,10 +116,10 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
                 f"[CQ:reply,id={message_id}]用户 {target_user_id} 已添加到黑名单，已踢出并不再接受入群。",
             )
 
-    elif raw_message.startswith("bl-rm"):
+    elif raw_message.startswith("blrm"):
 
         # 匹配CQ码
-        match = re.search(r"bl-rm\[CQ:at,qq=(\d+)\]", raw_message)
+        match = re.search(r"blrm\[CQ:at,qq=(\d+)\]", raw_message)
         if match:
             target_user_id = match.group(1)
             remove_from_blacklist(group_id, target_user_id)
@@ -132,7 +132,7 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
             logging.info(f"从黑名单删除用户 {target_user_id}")
 
         # 匹配QQ号
-        match = re.search(r"bl-rm([0-9]+)", raw_message)
+        match = re.search(r"blrm([0-9]+)", raw_message)
         if match:
             target_user_id = match.group(1)
             remove_from_blacklist(group_id, target_user_id)
@@ -143,8 +143,8 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
             )
             logging.info(f"从黑名单删除用户 {target_user_id}")
 
-    elif raw_message.startswith("bl-check"):
-        match = re.search(r"bl-check\[CQ:at,qq=([0-9]+)\]", raw_message)
+    elif raw_message.startswith("blcheck"):
+        match = re.search(r"blcheck\[CQ:at,qq=([0-9]+)\]", raw_message)
         if match:
             target_user_id = match.group(1)
             logging.info(f"检查用户 {target_user_id} 是否在黑名单中")
@@ -160,7 +160,7 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
                     group_id,
                     f"[CQ:reply,id={message_id}]用户 {target_user_id} 不在黑名单中。",
                 )
-    elif raw_message.startswith("bl-list"):
+    elif raw_message.startswith("bllist"):
         logging.info(f"执行查看黑名单命令")
         blacklist = read_blacklist(group_id)
         await send_group_msg(
@@ -168,6 +168,24 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
             group_id,
             f"[CQ:reply,id={message_id}]群{group_id}黑名单:\n" + "\n".join(blacklist),
         )
+
+
+# 黑名单系统菜单
+async def Blacklist(websocket, group_id, message_id):
+    message = (
+        f"[CQ:reply,id={message_id}]\n"
+        + """
+黑名单系统
+
+bladd@或QQ号 添加黑名单
+blrm@或QQ号 删除黑名单
+bllist 查看黑名单
+blcheck@或QQ号 检查黑名单
+
+黑名单系统默认开启，无开关
+"""
+    )
+    await send_group_msg(websocket, group_id, message)
 
 
 # 处理黑名单消息事件
@@ -181,6 +199,9 @@ async def handle_blacklist_message_group(websocket, msg):
         raw_message = msg.get("raw_message")
         role = msg.get("sender", {}).get("role")
         message_id = msg.get("message_id")
+
+        if raw_message == "blacklist" or raw_message == "黑名单系统":
+            await Blacklist(websocket, group_id, message_id)
 
         if is_blacklisted(group_id, user_id):
 

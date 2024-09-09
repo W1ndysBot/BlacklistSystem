@@ -174,16 +174,14 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
 async def Blacklist(websocket, group_id, message_id):
     message = (
         f"[CQ:reply,id={message_id}]\n"
-        + """
-黑名单系统
+        + """黑名单系统
 
 bladd@或QQ号 添加黑名单
 blrm@或QQ号 删除黑名单
 bllist 查看黑名单
 blcheck@或QQ号 检查黑名单
 
-黑名单系统默认开启，无开关
-"""
+黑名单系统默认开启，无开关"""
     )
     await send_group_msg(websocket, group_id, message)
 

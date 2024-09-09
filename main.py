@@ -272,8 +272,3 @@ async def handle_blacklist_group_notice(websocket, msg):
         )
         await set_group_kick(websocket, group_id, user_id)
     pass
-
-
-# 处理黑名单定时任务
-async def handle_blacklist_cron_task(websocket):
-    pass

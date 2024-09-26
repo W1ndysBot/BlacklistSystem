@@ -25,7 +25,6 @@ os.makedirs(DATA_DIR, exist_ok=True)
 
 from app.config import owner_id
 from app.api import *
-from app.switch import load_switch, save_switch
 
 
 # 是否是群主
@@ -85,6 +84,8 @@ def is_blacklisted(group_id, user_id):
 
 # 黑名单管理
 async def manage_blacklist(websocket, message_id, group_id, raw_message, is_authorized):
+
+    # 鉴权
     if not is_authorized:
         return
 
@@ -160,6 +161,24 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
                     group_id,
                     f"[CQ:reply,id={message_id}]用户 {target_user_id} 不在黑名单中。",
                 )
+
+    # 扫描群内是否有人在黑名单
+    elif raw_message.startswith("blscan"):
+        user_list = await get_group_member_list_qq(websocket, group_id)
+        logging.info(f"扫描群 {group_id} 是否有人在黑名单")
+        for blacklist_user_id in user_list:
+            blacklist_user_id = str(blacklist_user_id)  # 转换为字符串
+            if is_blacklisted(group_id, blacklist_user_id):
+                logging.info(
+                    f"发现用户 {blacklist_user_id} 在黑名单中，已踢出并不再接受入群。"
+                )
+                await set_group_kick(websocket, group_id, blacklist_user_id)
+                await send_group_msg(
+                    websocket,
+                    group_id,
+                    f"发现用户 {blacklist_user_id} 在黑名单中，已踢出并不再接受入群。",
+                )
+
     elif raw_message.startswith("bllist"):
         logging.info(f"执行查看黑名单命令")
         blacklist = read_blacklist(group_id)
@@ -180,6 +199,7 @@ bladd@或QQ号 添加黑名单
 blrm@或QQ号 删除黑名单
 bllist 查看黑名单
 blcheck@或QQ号 检查黑名单
+blscan 扫描群内是否有人在黑名单
 
 黑名单系统默认开启，无开关"""
     )

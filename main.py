@@ -164,6 +164,7 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
 
     # 扫描群内是否有人在黑名单
     elif raw_message.startswith("blscan"):
+        FLAG = False
         user_list = await get_group_member_list_qq(websocket, group_id)
         logging.info(f"扫描群 {group_id} 是否有人在黑名单")
         for blacklist_user_id in user_list:
@@ -178,6 +179,14 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
                     group_id,
                     f"发现用户 {blacklist_user_id} 在黑名单中，已踢出并不再接受入群。",
                 )
+                FLAG = True
+
+        if not FLAG:
+            await send_group_msg(
+                websocket,
+                group_id,
+                f"[CQ:reply,id={message_id}]群 {group_id} 没有人在黑名单中。",
+            )
 
     elif raw_message.startswith("bllist"):
         logging.info(f"执行查看黑名单命令")

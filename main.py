@@ -167,18 +167,17 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
         FLAG = False
         user_list = await get_group_member_list_qq(websocket, group_id)
         logging.info(f"扫描群 {group_id} 是否有人在黑名单")
+        del_message_id = await send_group_msg_with_reply(
+            websocket,
+            group_id,
+            f"扫描群 {group_id} 是否有人在黑名单，请稍等...",
+        )
         blacklist_user_ids = []
         for blacklist_user_id in user_list:
             blacklist_user_id = str(blacklist_user_id)  # 转换为字符串
             if is_blacklisted(group_id, blacklist_user_id):
                 logging.info(f"发现用户 {blacklist_user_id} 在黑名单中，将记录。")
                 blacklist_user_ids.append(blacklist_user_id)
-                # await set_group_kick(websocket, group_id, blacklist_user_id)
-                await send_group_msg(
-                    websocket,
-                    group_id,
-                    f"检测出本群黑名单列表：{blacklist_user_ids}，发送t+QQ号，将踢出该用户。",
-                )
                 FLAG = True
 
         if not FLAG:
@@ -186,6 +185,13 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
                 websocket,
                 group_id,
                 f"[CQ:reply,id={message_id}]群 {group_id} 没有人在黑名单中。",
+            )
+        else:
+            await delete_msg(websocket, del_message_id)
+            await send_group_msg(
+                websocket,
+                group_id,
+                f"[CQ:reply,id={message_id}]检测出本群黑名单列表：{blacklist_user_ids}，发送t+QQ号，将踢出该用户。",
             )
 
     elif raw_message.startswith("bllist"):

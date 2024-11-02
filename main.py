@@ -290,12 +290,14 @@ async def handle_blacklist_message_group(websocket, msg):
         raw_message = msg.get("raw_message")
         role = msg.get("sender", {}).get("role")
         message_id = msg.get("message_id")
-
+        sub_type = msg.get("sub_type")
         if raw_message == "blacklist" or raw_message == "黑名单系统":
             await Blacklist(websocket, group_id, message_id)
 
         if is_blacklisted(group_id, user_id):
 
+            # 貌似不用判断sub_type，因为这是在发消息时候的判断
+            # if sub_type != "invite" and sub_type != "approve":
             await send_group_msg(
                 websocket,
                 group_id,
@@ -332,7 +334,7 @@ async def handle_blacklist_request_event(websocket, msg):
         user_id = str(msg.get("user_id"))
         flag = str(msg.get("flag"))
         if is_blacklisted(group_id, user_id):
-            logging.info(f"发现黑名单用户 {user_id}申请入群，将拒绝申请。")
+
             await set_group_add_request(
                 websocket, flag, "group", False, "你已被加入黑名单。"
             )
@@ -340,8 +342,9 @@ async def handle_blacklist_request_event(websocket, msg):
             await send_group_msg(
                 websocket,
                 group_id,
-                f"发现黑名单用户 {user_id}申请入群，将拒绝申请。",
+                f"[+]发现黑名单用户[{user_id}]申请入群，将拒绝申请。",
             )
+            logging.info(f"[+]发现黑名单用户[{user_id}]申请入群，将拒绝申请。")
 
     except Exception as e:
         logging.error(f"处理黑名单请求事件失败: {e}")
@@ -356,11 +359,11 @@ async def handle_blacklist_group_notice(websocket, msg):
 
     # 如果用户在黑名单中，并且不是撤回消息，因为测试发现，撤回消息的user_id是被拉黑的用户
     if is_blacklisted(group_id, user_id) and notice_type != "group_recall":
-        logging.info(f"发现黑名单用户 {user_id}，将踢出群聊，并不再接受入群。")
+        logging.info(f"[+]发现黑名单用户[{user_id}]，将踢出群聊，并不再接受入群。")
         await send_group_msg(
             websocket,
             group_id,
-            f"发现黑名单用户 {user_id}，将踢出群聊，并不再接受入群。",
+            f"[+]发现黑名单用户[{user_id}]，将踢出群聊，并不再接受入群。",
         )
         await set_group_kick(websocket, group_id, user_id)
     pass

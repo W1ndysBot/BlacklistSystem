@@ -355,7 +355,7 @@ async def handle_blacklist_request_event(websocket, msg):
 async def handle_blacklist_group_notice(websocket, msg):
     user_id = str(msg.get("user_id"))
     group_id = str(msg.get("group_id"))
-    notice_type = msg.get("notice_type")
+    notice_type = str(msg.get("notice_type"))
 
     # 如果用户在黑名单中，并且不是撤回消息，因为测试发现，撤回消息的user_id是被拉黑的用户
     if is_blacklisted(group_id, user_id) and notice_type != "group_recall":

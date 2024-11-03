@@ -301,11 +301,11 @@ async def handle_blacklist_message_group(websocket, msg):
             await send_group_msg(
                 websocket,
                 group_id,
-                f"发现黑名单用户 {user_id}，将踢出群聊，并不再接受入群。",
+                f"[+]发现黑名单用户[{user_id}]发送消息，将踢出群聊。",
             )
             await set_group_kick(websocket, group_id, user_id)
             await delete_msg(websocket, message_id)
-            logging.info(f"发现黑名单用户 {user_id}，将踢出群聊，并不再接受入群。")
+            logging.info(f"[+]发现黑名单用户[{user_id}]发送消息，将踢出群聊。")
 
         else:
             # 处理管理员命令
@@ -356,14 +356,19 @@ async def handle_blacklist_group_notice(websocket, msg):
     user_id = str(msg.get("user_id"))
     group_id = str(msg.get("group_id"))
     notice_type = str(msg.get("notice_type"))
+    sub_type = str(msg.get("sub_type"))
 
     # 如果用户在黑名单中，并且不是撤回消息，因为测试发现，撤回消息的user_id是被拉黑的用户
-    if is_blacklisted(group_id, user_id) and notice_type != "group_recall":
-        logging.info(f"[+]发现黑名单用户[{user_id}]，将踢出群聊，并不再接受入群。")
+    if (
+        is_blacklisted(group_id, user_id)
+        and notice_type != "group_recall"
+        and sub_type != "invite"
+        and sub_type != "approve"
+    ):
+        logging.info(f"[+]发现黑名单用户[{user_id}]申请入群，将拒绝入群。")
         await send_group_msg(
             websocket,
             group_id,
-            f"[+]发现黑名单用户[{user_id}]，将踢出群聊，并不再接受入群。",
+            f"[+]发现黑名单用户[{user_id}]申请入群，将拒绝入群。",
         )
         await set_group_kick(websocket, group_id, user_id)
-    pass

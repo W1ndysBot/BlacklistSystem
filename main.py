@@ -98,98 +98,63 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
     # 鉴权
     if not is_authorized:
         return
-
     if raw_message.startswith("bladd"):
 
-        # 匹配CQ码
-        match = re.search(r"bladd\[CQ:at,qq=(\d+)\]", raw_message)
-        if match:
-            target_user_id = match.group(1)
-            logging.info(f"添加黑名单用户 {target_user_id} 到黑名单并踢出")
+        # 匹配CQ码或QQ号
+        matches = re.findall(r"(\d+)", raw_message)
+        for target_user_id in matches:
+            logging.info(f"添加群{group_id}黑名单用户{target_user_id}到黑名单并踢出")
             add_to_blacklist(group_id, target_user_id)
             await set_group_kick(websocket, group_id, target_user_id)
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:reply,id={message_id}]用户 {target_user_id} 已添加到黑名单，已踢出并不再接受入群。",
-            )
-
-        # 匹配QQ号
-        match = re.search(r"bladd([0-9]+)", raw_message)
-        if match:
-            target_user_id = match.group(1)
-            logging.info(f"添加黑名单用户 {target_user_id} 到黑名单并踢出")
-            add_to_blacklist(group_id, target_user_id)
-            await set_group_kick(websocket, group_id, target_user_id)
-            await send_group_msg(
-                websocket,
-                group_id,
-                f"[CQ:reply,id={message_id}]用户 {target_user_id} 已添加到黑名单，已踢出并不再接受入群。",
+                f"[CQ:reply,id={message_id}]用户{target_user_id}已添加到黑名单，已踢出并不再接受入群。",
             )
 
     elif raw_message.startswith("blrm"):
 
-        # 匹配CQ码
-        match = re.search(r"blrm\[CQ:at,qq=(\d+)\]", raw_message)
-        if match:
-            target_user_id = match.group(1)
-            remove_from_blacklist(group_id, target_user_id)
-
-            await send_group_msg(
-                websocket,
-                group_id,
-                f"[CQ:reply,id={message_id}]用户 {target_user_id} 已从黑名单中移除。",
-            )
-            logging.info(f"从黑名单删除用户 {target_user_id}")
-
-        # 匹配QQ号
-        match = re.search(r"blrm([0-9]+)", raw_message)
-        if match:
-            target_user_id = match.group(1)
+        # 匹配CQ码或QQ号
+        matches = re.findall(r"(\d+)", raw_message)
+        for target_user_id in matches:
             remove_from_blacklist(group_id, target_user_id)
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:reply,id={message_id}]用户 {target_user_id} 已从黑名单中移除。",
+                f"[CQ:reply,id={message_id}]用户{target_user_id}已从黑名单中移除。",
             )
-            logging.info(f"从黑名单删除用户 {target_user_id}")
+            logging.info(f"从群{group_id}黑名单删除用户{target_user_id}")
 
     elif raw_message.startswith("blcheck"):
-        match = re.search(r"blcheck\[CQ:at,qq=([0-9]+)\]", raw_message)
-        if match:
-            target_user_id = match.group(1)
-            logging.info(f"检查用户 {target_user_id} 是否在黑名单中")
+
+        # 匹配CQ码或QQ号
+        matches = re.findall(r"(\d+)", raw_message)
+        for target_user_id in matches:
+            logging.info(f"检查群{group_id}用户{target_user_id}是否在黑名单中")
             if is_blacklisted(group_id, target_user_id):
                 await send_group_msg(
                     websocket,
                     group_id,
-                    f"[CQ:reply,id={message_id}]用户 {target_user_id} 在黑名单中。",
+                    f"[CQ:reply,id={message_id}][+]用户{target_user_id}在黑名单中。",
                 )
             else:
                 await send_group_msg(
                     websocket,
                     group_id,
-                    f"[CQ:reply,id={message_id}]用户 {target_user_id} 不在黑名单中。",
+                    f"[CQ:reply,id={message_id}][+]用户{target_user_id}不在黑名单中。",
                 )
 
     # 扫描群内是否有人在黑名单
     elif raw_message.startswith("blscan"):
         logging.info(f"执行云端黑名单扫描命令")
         FLAG = False
-        del_message_id = await send_group_msg_with_reply(
+        await send_group_msg(
             websocket,
             group_id,
-            f"[CQ:reply,id={message_id}]即将读取云端黑名单，请稍等...",
+            f"[CQ:reply,id={message_id}][+]即将读取云端黑名单，请稍等...",
         )
 
         cloud_blacklist = read_cloud_blacklist()
-        if cloud_blacklist:
-            await delete_msg(websocket, del_message_id)
-            del_message_id = await send_group_msg_with_reply(
-                websocket,
-                group_id,
-                f"读取云端黑名单成功，即将扫描群 {group_id} 是否有人在云端黑名单",
-            )
 
         user_list = await get_group_member_list_qq(websocket, group_id)
 
@@ -197,7 +162,9 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
         for blacklist_user_id in user_list:
             blacklist_user_id = str(blacklist_user_id)  # 转换为字符串
             if blacklist_user_id in cloud_blacklist:
-                logging.info(f"发现用户 {blacklist_user_id} 在云端黑名单中，将记录。")
+                logging.info(
+                    f"发现群{group_id}的用户{blacklist_user_id}在云端黑名单中，将记录。"
+                )
                 blacklist_user_ids.append(blacklist_user_id)
                 FLAG = True
 
@@ -205,24 +172,22 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:reply,id={message_id}]群 {group_id} 没有人在云端黑名单中。",
+                f"[CQ:reply,id={message_id}][+]群{group_id}没有人在云端黑名单中。",
             )
-            await delete_msg(websocket, del_message_id)
         else:
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:reply,id={message_id}]检测出本群云端黑名单列表：{', '.join(blacklist_user_ids)}，发送 t+QQ号，将踢出该用户，发送 bltall将踢出所有云端黑名单用户。",
+                f"[+]检测出本群云端黑名单列表如下：\n{'\n'.join(blacklist_user_ids)}\n发送 t+QQ号，将踢出该用户，发送 bltall 将踢出所有云端黑名单用户。",
             )
-            await delete_msg(websocket, del_message_id)
 
     elif raw_message.startswith("bltall"):
-        logging.info(f"踢出所有云端黑名单用户")
+        logging.info(f"[+]踢出{group_id}所有云端黑名单用户")
 
-        del_message_id = await send_group_msg_with_reply(
+        await send_group_msg(
             websocket,
             group_id,
-            f"[CQ:reply,id={message_id}]即将踢出所有云端黑名单用户，请稍等...",
+            f"[CQ:reply,id={message_id}][+]即将踢出所有云端黑名单用户，请稍等...",
         )
 
         # 获取群成员列表
@@ -240,16 +205,14 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:reply,id={message_id}]已踢出以下云端黑名单用户：{', '.join(kicked_users)}。",
+                f"[CQ:reply,id={message_id}][+]已踢出以下云端黑名单用户：{', '.join(kicked_users)}。",
             )
-            await delete_msg(websocket, del_message_id)
         else:
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:reply,id={message_id}]没有云端黑名单用户被踢出。",
+                f"[CQ:reply,id={message_id}][+]没有云端黑名单用户被踢出。",
             )
-            await delete_msg(websocket, del_message_id)
 
     elif raw_message.startswith("bllist"):
         logging.info(f"执行查看黑名单命令")
@@ -257,7 +220,8 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
         await send_group_msg(
             websocket,
             group_id,
-            f"[CQ:reply,id={message_id}]群{group_id}黑名单:\n" + "\n".join(blacklist),
+            f"[CQ:reply,id={message_id}][+]群{group_id}黑名单:\n"
+            + "\n".join(blacklist),
         )
 
 
@@ -320,7 +284,7 @@ async def handle_blacklist_message_group(websocket, msg):
             )
 
     except Exception as e:
-        logging.error(f"处理黑名单消息事件失败: {e}")
+        logging.error(f"处理黑名单消息事件失败:{e}")
         return
 
 
@@ -347,7 +311,7 @@ async def handle_blacklist_request_event(websocket, msg):
             logging.info(f"[+]发现黑名单用户[{user_id}]申请入群，将拒绝申请。")
 
     except Exception as e:
-        logging.error(f"处理黑名单请求事件失败: {e}")
+        logging.error(f"处理黑名单请求事件失败:{e}")
         return
 
 

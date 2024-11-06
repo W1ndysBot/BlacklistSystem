@@ -189,10 +189,13 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
                 f"[CQ:reply,id={message_id}][+]群{group_id}没有人在云端黑名单中。",
             )
         else:
+            blacklist_user_ids_str = "\n".join(blacklist_user_ids)
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:reply,id={message_id}][+]检测出本群云端黑名单列表如下：\n{{'\n'.join(blacklist_user_ids)}}\n发送 t+QQ号，将踢出该用户，发送 bltall 将踢出所有云端黑名单用户。",
+                f"[CQ:reply,id={message_id}][+]检测出本群云端黑名单列表如下：\n"
+                + blacklist_user_ids_str
+                + "\n发送 t+QQ号，将踢出该用户，发送 bltall 将踢出所有云端黑名单用户。",
             )
 
     elif raw_message.startswith("bltall"):

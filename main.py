@@ -315,11 +315,10 @@ async def handle_blacklist_request_event(websocket, msg):
         user_id = str(msg.get("user_id"))
         flag = str(msg.get("flag"))
         if is_blacklisted(group_id, user_id):
-
+            await set_group_kick(websocket, group_id, user_id)
             await set_group_add_request(
                 websocket, flag, "group", False, "你已被加入黑名单。"
             )
-
             await send_group_msg(
                 websocket,
                 group_id,

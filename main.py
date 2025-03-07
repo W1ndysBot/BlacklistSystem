@@ -171,8 +171,20 @@ async def handle_blacklist_group_message(websocket, msg):
         role = msg.get("sender", {}).get("role")
         message_id = msg.get("message_id")
 
-        if is_blacklisted(group_id, user_id):
+        # 先判断是否是管理员命令
+        is_admin = is_group_admin(role)  # 是否是群管理员
+        is_owner = is_group_owner(role)  # 是否是群主
+        is_authorized = (is_admin or is_owner) or (
+            user_id in owner_id
+        )  # 是否是群主或管理员或root管理员
 
+        # 如果是管理员且发送的是黑名单命令，优先处理命令
+        if is_authorized and raw_message.startswith("bl"):
+            await manage_blacklist(
+                websocket, message_id, group_id, raw_message, is_authorized
+            )
+        # 然后再检查是否在黑名单中
+        elif is_blacklisted(group_id, user_id):
             await send_group_msg(
                 websocket,
                 group_id,
@@ -180,19 +192,6 @@ async def handle_blacklist_group_message(websocket, msg):
             )
             await set_group_kick(websocket, group_id, user_id)  # 踢出群聊
             await delete_msg(websocket, message_id)  # 撤回消息
-            logging.info(f"发现黑名单用户[{user_id}]发送消息，将踢出群聊。")
-
-        else:
-            # 处理管理员命令
-            is_admin = is_group_admin(role)  # 是否是群管理员
-            is_owner = is_group_owner(role)  # 是否是群主
-            is_authorized = (is_admin or is_owner) or (
-                user_id in owner_id
-            )  # 是否是群主或管理员或root管理员
-
-            await manage_blacklist(
-                websocket, message_id, group_id, raw_message, is_authorized
-            )
 
     except Exception as e:
         logging.error(f"处理黑名单消息事件失败:{e}")

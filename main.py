@@ -159,22 +159,6 @@ async def manage_blacklist(websocket, message_id, group_id, raw_message, is_auth
         )
 
 
-# 黑名单系统菜单
-async def Blacklist(websocket, group_id, message_id):
-    message = (
-        f"[CQ:reply,id={message_id}]\n"
-        + """黑名单系统
-
-bladd@或QQ号 添加黑名单
-blrm@或QQ号 删除黑名单
-bllist 查看黑名单
-blcheck@或QQ号 检查黑名单
-
-黑名单系统默认开启，无开关"""
-    )
-    await send_group_msg(websocket, group_id, message)
-
-
 # 处理黑名单消息事件
 async def handle_blacklist_group_message(websocket, msg):
     try:
@@ -186,21 +170,16 @@ async def handle_blacklist_group_message(websocket, msg):
         raw_message = msg.get("raw_message")
         role = msg.get("sender", {}).get("role")
         message_id = msg.get("message_id")
-        sub_type = msg.get("sub_type")
-        if raw_message == "blacklist" or raw_message == "黑名单系统":
-            await Blacklist(websocket, group_id, message_id)
 
         if is_blacklisted(group_id, user_id):
 
-            # 貌似不用判断sub_type，因为这是在发消息时候的判断
-            # if sub_type != "invite" and sub_type != "approve":
             await send_group_msg(
                 websocket,
                 group_id,
                 f"发现黑名单用户[{user_id}]发送消息，将踢出群聊。",
             )
-            await set_group_kick(websocket, group_id, user_id)
-            await delete_msg(websocket, message_id)
+            await set_group_kick(websocket, group_id, user_id)  # 踢出群聊
+            await delete_msg(websocket, message_id)  # 撤回消息
             logging.info(f"发现黑名单用户[{user_id}]发送消息，将踢出群聊。")
 
         else:

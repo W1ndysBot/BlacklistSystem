@@ -264,15 +264,7 @@ async def handle_events(websocket, msg):
         elif post_type == "message":
             message_type = msg.get("message_type")
             if message_type == "group":
-                group_id = str(msg.get("group_id", ""))
-                message_id = str(msg.get("message_id", ""))
-                raw_message = str(msg.get("raw_message", ""))
-                user_id = str(msg.get("user_id", ""))
-                role = str(msg.get("sender", {}).get("role", ""))
-
-                # 处理黑名单相关命令
-                if raw_message.startswith("bl"):
-                    await handle_blacklist_group_message(websocket, msg)
+                await handle_blacklist_group_message(websocket, msg)
             elif message_type == "private":
                 return
 
